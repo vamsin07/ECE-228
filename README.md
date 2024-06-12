@@ -58,6 +58,7 @@ pip install -r requirements.txt
 <h5>Reconstruction and Quantisation loss for 2 codewords</h5>
 
 <h3>Quantisation and reconstruction loss for Transformer with the Vector Quantizer layer</h3>
+
 ![Transformer+VQVAE](https://github.com/vamsin07/ECE-228/assets/51058745/a9bfe7f5-40c0-4d78-945c-519288098825)
 
 
