@@ -30,23 +30,24 @@ class RFStaticDataset(Dataset):
 
         self.tx: Transmitter = Transmitter(modulation=modulation)
         self.rx: Receiver = Receiver(modulation=modulation)
+        self.snr = np.random.uniform(snr_min, snr_max)
+        self.channel: AWGN = AWGN(self.snr)
 
     def __len__(self) -> int:
         return self.n_trials
 
     def __getitem__(self, idx: int) -> tuple:        
-        snr: float = np.random.uniform(self.snr_min, self.snr_max)
         tx_bits: torch.Tensor = torch.randint(0, 2, (self.n_symbols,))
         
-        channel: AWGN = AWGN(snr)
         tx_iq: torch.Tensor = self.tx.modulate(bits=tx_bits)
-        rx_iq: torch.Tensor = channel(tx_iq)
+        rx_iq: torch.Tensor = self.channel(tx_iq)
         rx_bits: torch.Tensor = self.rx.demodulate(iq=rx_iq)
         
         n_errors: torch.Tensor = torch.sum(torch.abs(tx_bits.float() - torch.tensor(rx_bits)))
         #ber: torch.Tensor = n_errors / self.n_symbols
-
+        
         rx_bits = torch.tensor(rx_bits).t()
+        tx_iq = tx_iq.squeeze(0).squeeze(0)
         rx_iq = rx_iq.squeeze(0).squeeze(0)
 
         if self.window:
@@ -54,6 +55,12 @@ class RFStaticDataset(Dataset):
             rx_iq = rx_iq.unfold(-1, self.window_size, self.window_stride)
             _, n_windows, _ = rx_iq.shape
             rx_iq = rx_iq.permute(1, 0, 2).reshape(n_windows, -1)
+            tx_iq_orig = tx_iq
+            tx_iq = F.pad(tx_iq, (self.window_padding, self.window_padding))
+            tx_iq = tx_iq.unfold(-1, self.window_size, self.window_stride)
+            _, n_windows, _ = tx_iq.shape
+            tx_iq = tx_iq.permute(1, 0, 2).reshape(n_windows, -1)
+            return tx_bits, rx_bits, tx_iq, rx_iq, tx_iq_orig
 
         return tx_bits, rx_bits, rx_iq
 

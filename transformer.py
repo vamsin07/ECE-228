@@ -6,17 +6,6 @@ from torch import nn
 import torch.nn.functional as F
 
 
-class StepFunction(torch.autograd.Function):
-
-    @staticmethod
-    def forward(ctx, input):
-        return (input > 0.5).float()
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return F.hardtanh(grad_output, min_val=0.0, max_val=1.0)
-
-
 class PositionalEncoding(nn.Module):
 
     def __init__(
@@ -51,23 +40,24 @@ class TransformerModel(nn.Module):
         output_dim: int,
     ):
         super(TransformerModel, self).__init__()
-        self.input_embedding = nn.Linear(input_dim, embedding_dim)
+        self.embedding = nn.Linear(input_dim, embedding_dim)
         self.pos_encoder = PositionalEncoding(embedding_dim)
-        self.transformer_encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=embedding_dim, nhead=8),
-            num_layers=6,
-        )
+        self.transformer = nn.Transformer(d_model=embedding_dim)
         self.flatten = nn.Flatten()
-        self.decoder = nn.Linear(embedding_dim * num_windows, output_dim)
+        self.fc1 = nn.Linear(embedding_dim * num_windows, 512)
+        self.fc2 = nn.Linear(512, output_dim)
         
-    def forward(self, input):
-        input = F.relu(self.input_embedding(input))
+    def forward(self, input, target):
+        input = F.relu(self.embedding(input))
         input = self.pos_encoder(input)
-        x = self.transformer_encoder(input)
-        x = self.flatten(x)
-        x = self.decoder(x)
-        x = F.sigmoid(x)
-        return StepFunction.apply(x)
+        target = F.relu(self.embedding(target))
+        target = self.pos_encoder(target)
+        x = self.transformer(input, target)
+        x = self.flatten(x).unsqueeze(1)
+        x = x.repeat(1, 2, 1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
 
 def evaluate(
@@ -77,17 +67,24 @@ def evaluate(
     nbits,
     ntrials,
 ):
+    demodulate = dataloader.dataset.rx.demodulate
     model.eval()
+    num_model_errors = 0
     num_errors = 0
     total_loss = 0.0
     with torch.no_grad():
-        for tx_bits, _, rx_iq in dataloader:
-            tx_bits = tx_bits.float()
-            output = model(rx_iq)
-            total_loss += criterion(output, tx_bits).item()
-            num_errors += torch.sum(torch.abs(output - tx_bits)).item()
+        for tx_bits, rx_bits, tx_iq, rx_iq, tx_iq_orig in dataloader:
+            output = model(rx_iq, tx_iq)
+            total_loss += criterion(output, tx_iq_orig).item()
+            rx_bits_model = torch.zeros(tx_bits.shape)
+            for i in range(output.shape[0]):
+                iq = output[i].unsqueeze(0).unsqueeze(0)
+                rx_bits_model[i] = torch.tensor(demodulate(iq=iq)).t()
+            num_model_errors += torch.sum(torch.abs(rx_bits_model - tx_bits)).item()
+            num_errors += torch.sum(torch.abs(rx_bits - tx_bits)).item()
+    model_ber = float(num_model_errors) / float(nbits * ntrials)
     ber = float(num_errors) / float(nbits * ntrials)
-    return total_loss / len(dataloader), ber
+    return total_loss / len(dataloader), model_ber, ber
 
 
 def train(
@@ -95,26 +92,31 @@ def train(
     dataloader,
     criterion,
     optimizer,
-    scheduler,
     nbits,
     ntrials,
 ):
+    demodulate = dataloader.dataset.rx.demodulate
     model.train()
+    num_model_errors = 0
     num_errors = 0
     total_loss = 0.0
-    for tx_bits, _, rx_iq in dataloader:
-        tx_bits = tx_bits.float()
+    for tx_bits, rx_bits, tx_iq, rx_iq, tx_iq_orig in dataloader:
         optimizer.zero_grad()
-        output = model(rx_iq)
-        loss = criterion(output, tx_bits)
+        output = model(rx_iq, tx_iq)
+        loss = criterion(output, tx_iq_orig)
         loss.backward()
         optimizer.step()
-        scheduler.step()
         total_loss += loss.item()
-        num_errors += torch.sum(torch.abs(output - tx_bits)).item()
+        rx_bits_model = torch.zeros(tx_bits.shape)
+        for i in range(output.shape[0]):
+            iq = output[i].unsqueeze(0).unsqueeze(0)
+            rx_bits_model[i] = torch.tensor(demodulate(iq=iq)).t()
+        num_model_errors += torch.sum(torch.abs(rx_bits_model - tx_bits)).item()
+        num_errors += torch.sum(torch.abs(rx_bits - tx_bits)).item()
+    model_ber = float(num_model_errors) / float(nbits * ntrials)
     ber = float(num_errors) / float(nbits * ntrials)
     avg_loss = total_loss / len(dataloader)           
-    return model, avg_loss, ber
+    return model, avg_loss, model_ber, ber
 
 
 def train_model(
@@ -123,7 +125,6 @@ def train_model(
     val_loader,
     criterion,
     optimizer,
-    scheduler,
     num_epochs,
     train_nbits,
     val_nbits,
@@ -134,11 +135,11 @@ def train_model(
     best_model = None
     for epoch in range(num_epochs):
         start_time = time.time()
-        model, train_loss, train_ber = train(model, train_loader, criterion, optimizer, scheduler, train_nbits, train_ntrials)
-        val_loss, val_ber = evaluate(model, val_loader, criterion, val_nbits, val_ntrials)
+        model, train_loss, train_ber_model, train_ber  = train(model, train_loader, criterion, optimizer, train_nbits, train_ntrials)
+        val_loss, val_ber_model, val_ber = evaluate(model, val_loader, criterion, val_nbits, val_ntrials)
         elapsed = time.time() - start_time
-        print(f"Epoch {epoch+1} / {num_epochs} - Train Loss: {train_loss:.2f} - Val Loss: {val_loss:.2f} - Elapsed Time: {elapsed:.2f} seconds")
-        print(f"Train BER: {train_ber:.4f} - Val BER: {val_ber:.4f}") 
+        print(f"Epoch {epoch+1} / {num_epochs} - Train Loss: {train_loss:.6f} - Val Loss: {val_loss:.6f} - Elapsed Time: {elapsed:.2f} seconds")
+        print(f"Train BER: {train_ber:.4f} - Train BER (Model): {train_ber_model:.4f} - Val BER: {val_ber:.4f} - Val BER (Model): {val_ber_model:.4f}") 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = model
