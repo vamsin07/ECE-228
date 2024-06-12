@@ -1,5 +1,32 @@
 <h1>ECE 228: Final Project</h1>
 
+# Signal Reconstruction Using VQ-VAE and Transformer
+
+## Description
+
+This project explores the use of VQ-VAE and Transformer models for signal reconstruction of I/Q data under various modulation schemes and unknown noise distributions. The project aims to enhance signal representation, improve reconstruction quality, and achieve better noise robustness.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Features](#features)
+- [Contributing](#contributing)
+- [License](#license)
+
+
+## Installation
+
+Follow these steps to set up the project:
+bash
+# Clone the repository
+git clone https://github.com/your_username/ECE-228.git
+
+# Navigate to the project directory
+cd signal-reconstruction
+
+# Install dependencies
+pip install -r requirements.txt
 
 <h3>Log Loss Plot for the number of codewords v/s the Quantisation Loss</h3>
 
@@ -21,7 +48,7 @@
 
 ![2 codewords](https://github.com/vamsin07/ECE-228/assets/51058745/ca951641-3fbd-4e16-9bb8-68340c47bd53)
 
-<h3>Quantisation and reconstreuction loss for 4 codewords</h3>
+<h3>Quantisation and reconstruction loss for 4 codewords</h3>
 
 ![4 codewords](https://github.com/vamsin07/ECE-228/assets/51058745/938c2ebd-1f94-4187-b9c0-2d8cd3ab98fc)
 
