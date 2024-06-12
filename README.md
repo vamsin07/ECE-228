@@ -68,12 +68,11 @@ We welcome contributions! Follow these steps to contribute:
 
 # Acknowledgements
  
-Thanks to Shivam and Eric for their contributions.
 Inspired by the works of Aaron van den Oord et al., and Ashish Vaswani et al.
 
 # License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 
 
