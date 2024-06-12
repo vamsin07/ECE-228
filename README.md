@@ -11,6 +11,7 @@ This project explores the use of VQ-VAE and Transformer models for signal recons
 - [Installation](#installation)
 - [Features](#features)
 - [Contributing](#contributing)
+- [Acknowledgements](#acknowldegements)
 - [License](#license)
 
 
@@ -55,6 +56,24 @@ pip install -r requirements.txt
 
 ![4 codewords](https://github.com/vamsin07/ECE-228/assets/51058745/938c2ebd-1f94-4187-b9c0-2d8cd3ab98fc)
 <h5>Reconstruction and Quantisation loss for 2 codewords</h5>
+
+#contributing
+We welcome contributions! Follow these steps to contribute:
+
+1. Fork the repository
+2. Create a new branch (git checkout -b feature/your-feature)
+3. Commit your changes (git commit -m 'Add your feature')
+4. Push to the branch (git push origin feature/your-feature)
+5. Create a new Pull Request
+
+#acknowledgements
+
+Thanks to Shivam and Eric for their contributions.
+Inspired by the works of Aaron van den Oord et al., and Ashish Vaswani et al.
+
+#license
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 
 
