@@ -1,6 +1,7 @@
 import math
 import time
 
+import matplotlib.pyplot as plt
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -131,6 +132,8 @@ def train_model(
     train_ntrials,
     val_ntrials,
 ):
+    train_losses, val_losses = [], []
+    train_bers, val_bers = [], []
     best_val_loss = float("inf")
     best_model = None
     for epoch in range(num_epochs):
@@ -140,7 +143,34 @@ def train_model(
         elapsed = time.time() - start_time
         print(f"Epoch {epoch+1} / {num_epochs} - Train Loss: {train_loss:.6f} - Val Loss: {val_loss:.6f} - Elapsed Time: {elapsed:.2f} seconds")
         print(f"Train BER: {train_ber:.4f} - Train BER (Model): {train_ber_model:.4f} - Val BER: {val_ber:.4f} - Val BER (Model): {val_ber_model:.4f}") 
+        train_bers.append(train_ber)
+        val_bers.append(val_ber)
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = model
-    return best_model, best_val_loss
+    return best_model, best_val_loss, train_losses, val_losses, train_bers, val_bers
+
+
+def plot_transformer_losses(
+    train_losses,
+    val_losses,
+    train_bers,
+    val_bers,
+):
+    fig = plt.figure(figsize=(10, 6))
+    ax1 = fig.add_subplot(121)
+    ax1.plot(train_losses, label='Train Reconstruction Loss', linestyle='--')
+    ax1.plot(val_losses, label='Validation Reconstrunction Loss')
+    ax1.set_ylabel('Reconstruction Loss (MSELoss)')
+    ax1.set_xlabel('Epoch')
+    ax1.legend()
+    ax2 = fig.add_subplot(122)
+    ax2.plot(train_bers, label='Train BER', linestyle='--')
+    ax2.plot(val_bers, label='Validation BER')
+    ax2.set_ylabel('Bit Error Rate (BER)')
+    ax2.set_xlabel('Epoch')
+    ax2.legend()
+    fig.tight_layout()
+    plt.show()

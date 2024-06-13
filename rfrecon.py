@@ -4,7 +4,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 from static import RFStaticDataset
-from transformer import TransformerModel, train_model
+from transformer import TransformerModel, train_model, plot_transformer_losses
 
 VALID_MODEL_TYPES = ["transformer", "vqvae"]
 
@@ -48,7 +48,7 @@ def train(
     model = get_model(model_type, num_windows, output_dim, window_size=window_size)
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     criterion = nn.MSELoss()
-    model = train_model(
+    _, best_val_loss, train_losses, val_losses, train_bers, val_bers  = train_model(
         model,
         train_dl,
         test_dl,
@@ -60,6 +60,13 @@ def train(
         train_ntrials=train_ds.n_trials,
         val_ntrials=test_ds.n_trials,
     )
+    plot_transformer_losses(
+        train_losses,
+        val_losses,
+        train_bers,
+        val_bers,
+    )
+    print("Best validation loss:", best_val_loss) 
 
 
 def get_model(
