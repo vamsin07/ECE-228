@@ -82,7 +82,7 @@ This project is licensed under the MIT License.
 
 # Authors
 
-Shivam Singh(mailto:shs046@ucsd.edu)
+Shivam Singh(shs046@ucsd.edu)
 Eric Simpson
 
 
