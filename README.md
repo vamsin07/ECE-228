@@ -13,6 +13,7 @@ This project explores the use of VQ-VAE and Transformer models for signal recons
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowldegements)
 - [License](#license)
+- [Authors](#authors)
 
 
 ## Installation
@@ -79,5 +80,9 @@ Inspired by the works of Aaron van den Oord et al., and Ashish Vaswani et al.
 
 This project is licensed under the MIT License.
 
+# Authors
+
+Shivam Singh(mailto:shs046@ucsd.edu)
+Eric Simpson
 
 
